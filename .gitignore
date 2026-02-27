@@ -4,6 +4,7 @@
 
 # Entorno virtual
 .venv/
+.direnv/
 venv/
 env/
 ENV/
@@ -11,7 +12,6 @@ ENV/
 # Archivos de configuración local
 *.env
 *.env.*
-.envrc
 
 # Archivos de base de datos local
 db.sqlite3

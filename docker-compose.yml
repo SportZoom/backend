@@ -1,0 +1,19 @@
+services:
+  postgres: 
+    image: postgres:16
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=sportzoom_user 
+      - POSTGRES_PASSWORD=ClaveSportzoom123
+      - POSTGRES_DB=sportzoom 
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:  
+      PGADMIN_DEFAULT_EMAIL: "admin@sportzoom.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+    ports:
+      - "80:80"
+    depends_on:
+      - postgres

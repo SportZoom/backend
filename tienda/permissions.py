@@ -1,18 +1,19 @@
 from rest_framework import permissions
 
 class IsAdminUserCustom(permissions.BasePermission):
-    """Permite acceso solo a usuarios con es_admin=True"""
+    """Permite acceso solo a superusuarios"""
+
     def has_permission(self, request, view):
-        print(f"🔍 DEBUG Permission Check:")
-        print(f"   User: {request.user}")
-        print(f"   Is authenticated: {request.user.is_authenticated}")
-        print(f"   es_admin: {getattr(request.user, 'es_admin', 'NO TIENE ATRIBUTO')}")
-        
+        print("🔍 DEBUG Permission Check:")
+        print("   User:", request.user)
+        print("   Is authenticated:", request.user.is_authenticated)
+        print("   is_superuser:", request.user.is_superuser)
+
         result = bool(
             request.user and 
             request.user.is_authenticated and 
-            getattr(request.user, 'es_admin', False)
+            request.user.is_superuser
         )
-        
-        print(f"   ✅ Permission result: {result}")
+
+        print("   ✅ Permission result:", result)
         return result

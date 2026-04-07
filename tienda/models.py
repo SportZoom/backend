@@ -19,6 +19,28 @@ class Usuario(AbstractUser):
         verbose_name_plural = 'Usuarios'
 
 
+GENEROS = [
+    ('M', 'Masculino'),
+    ('F', 'Femenino'),
+    ('O', 'Otro'),
+    ('P', 'Prefiero no decir'),
+]
+
+class Cliente(models.Model):
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='cliente')
+    genero = models.CharField(max_length=1, choices=GENEROS)
+    acepta_terminos = models.BooleanField(default=False)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Cliente: {self.usuario.get_full_name() or self.usuario.username}"
+
+    class Meta:
+        db_table = 'tienda_cliente'
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
+
+
 class Producto(models.Model):
     """
     Modelo de productos disponibles en la tienda.

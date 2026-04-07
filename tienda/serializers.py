@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Producto
 from django.contrib.auth import authenticate
 from .models import Pedido
+from django.contrib.auth.password_validation import validate_password
+from .models import Cliente, Usuario
 
 class ProductoSerializer(serializers.ModelSerializer):
     imagen_url = serializers.SerializerMethodField(read_only=True)
@@ -44,3 +46,50 @@ class PedidoSerializer(serializers.ModelSerializer):
         model = Pedido
         fields = '__all__'
         read_only_fields = ['numero_pedido', 'fecha', 'estado', 'wompi_id']
+
+
+class ClienteRegistroSerializer(serializers.Serializer):
+    nombre = serializers.CharField(max_length=150)
+    correo = serializers.EmailField()
+    genero = serializers.ChoiceField(choices=['M', 'F', 'O', 'P'])
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    acepta_terminos = serializers.BooleanField()
+
+    def validate_correo(self, value):
+        if Usuario.objects.filter(email=value).exists():
+            raise serializers.ValidationError('Este correo ya está registrado.')
+        return value
+
+    def validate_acepta_terminos(self, value):
+        if not value:
+            raise serializers.ValidationError('Debes aceptar los términos y condiciones.')
+        return value
+
+    def create(self, validated_data):
+        user = Usuario.objects.create_user(
+            username=validated_data['correo'],   
+            email=validated_data['correo'],
+            first_name=validated_data['nombre'],
+            password=validated_data['password'],
+            es_admin=False
+        )
+        Cliente.objects.create(
+            usuario=user,
+            genero=validated_data['genero'],
+            acepta_terminos=validated_data['acepta_terminos']
+        )
+        return user
+
+
+class ClienteLoginSerializer(serializers.Serializer):
+    correo = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        user = authenticate(username=data['correo'], password=data['password'])
+        if user is None:
+            raise serializers.ValidationError('Correo o contraseña incorrectos.')
+        if user.es_admin:
+            raise serializers.ValidationError('Usa el panel de administrador.')
+        data['user'] = user
+        return data

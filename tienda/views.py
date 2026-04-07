@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view
 from django.conf import settings
 import requests
 import uuid
+from .serializers import ClienteRegistroSerializer, ClienteLoginSerializer
 
 
 
@@ -120,6 +121,39 @@ class ProductoViewSet(viewsets.ModelViewSet):
         print("FILES:", request.FILES)
         print("POST:", request.data)
         return super().create(request, *args, **kwargs)
+    
+
+class ClienteRegistroView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ClienteRegistroSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'mensaje': 'Registro exitoso',
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'nombre': user.first_name,
+            'correo': user.email,
+        }, status=status.HTTP_201_CREATED)
+
+
+class ClienteLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ClienteLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'nombre': user.first_name,
+            'correo': user.email,
+        }, status=status.HTTP_200_OK)
     
 # Nuevo endpoint para crear pedidos
 # ======================================

@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import ProductoList
+from .views import ClienteLoginView, ClienteRegistroView, ProductoList
 from .views import AdminLoginView
 #from .views import ProductoDetail
 from .views import ProductoCreate
@@ -29,4 +29,6 @@ urlpatterns = [
     path('pedidos/consultar/<str:numero_pedido>/', consultar_pedido, name='consultar-pedido'),
     path('admin/pedidos/', listar_pedidos, name='listar-pedidos'),  # ← AGREGAR
     path('admin/pedidos/<str:numero_pedido>/estado/', actualizar_estado_pedido, name='actualizar-estado'),  # ← AGREGAR
+    path('clientes/registro/', ClienteRegistroView.as_view(), name='cliente-registro'),
+    path('clientes/login/', ClienteLoginView.as_view(), name='cliente-login'),
 ]

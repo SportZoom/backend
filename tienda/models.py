@@ -93,26 +93,27 @@ class Producto(models.Model):
 
 class Pedido(models.Model):
     ESTADOS = (
-        ("pendiente", "Pendiente de pago"),
-        ("pagado", "Pagado"),
-        ("fallido", "Pago fallido"),
-        ("enviado", "Enviado"),        
-        ("entregado", "Entregado"),        
-        ("cancelado", "Cancelado"),
-
+        ("comprado", "Comprado"),
+        ("enviado", "Enviado"),
+        ("en_reparto", "En reparto"),
+        ("entregado", "Entregado"),
     )
-
     numero_pedido = models.CharField(max_length=20, unique=True, editable=False)
+    cliente = models.ForeignKey(
+        'Cliente',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pedidos'
+    )
     nombre = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     fecha = models.DateTimeField(auto_now_add=True)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     carrito = models.JSONField()
-    estado = models.CharField(max_length=20, choices=ESTADOS, default="pendiente")
+    estado = models.CharField(max_length=20, choices=ESTADOS, default="comprado")
     wompi_id = models.CharField(max_length=100, blank=True, null=True)
     referencia_pago = models.CharField(max_length=150, null=True, blank=True)
-
 
     def save(self, *args, **kwargs):
         if not self.numero_pedido:

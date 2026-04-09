@@ -12,6 +12,7 @@ from .views import iniciar_pago
 from .views import verificar_pago
 from .views import consultar_pedido
 from .views import listar_pedidos, actualizar_estado_pedido
+from .views import MisPedidosView
 
 router = DefaultRouter()
 router.register(r'productos', ProductoViewSet, basename='producto')
@@ -31,4 +32,5 @@ urlpatterns = [
     path('admin/pedidos/<str:numero_pedido>/estado/', actualizar_estado_pedido, name='actualizar-estado'),  # ← AGREGAR
     path('clientes/registro/', ClienteRegistroView.as_view(), name='cliente-registro'),
     path('clientes/login/', ClienteLoginView.as_view(), name='cliente-login'),
+    path('clientes/mis-pedidos/', MisPedidosView.as_view(), name='mis-pedidos'),
 ]

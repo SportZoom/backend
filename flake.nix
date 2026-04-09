@@ -22,6 +22,7 @@
             packages = [
               pkgs.python313
               pkgs.uv
+              pkgs.basedpyright
             ];
 
 						#docker run --name db-integrador -p 5432:5432 -e POSTGRES_PASSWORD=ClaveSportzoom123 -e POSTGRES_USER=sportzoom_user -e POSTGRES_DB=sportzoom -d postgres:16

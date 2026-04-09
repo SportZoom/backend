@@ -93,3 +93,18 @@ class ClienteLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Usa el panel de administrador.')
         data['user'] = user
         return data
+
+class PedidoClienteSerializer(serializers.ModelSerializer):
+    cantidad_productos = serializers.SerializerMethodField()
+    estado_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pedido
+        fields = ['numero_pedido', 'fecha', 'total', 'estado', 'estado_display', 'cantidad_productos', 'carrito']
+
+    def get_cantidad_productos(self, obj):
+        return sum(item.get('cantidad', 1) for item in obj.carrito)
+
+    def get_estado_display(self, obj):
+        # Usa los choices del modelo directamente, soporta cambios futuros
+        return dict(Pedido.ESTADOS).get(obj.estado, obj.estado)

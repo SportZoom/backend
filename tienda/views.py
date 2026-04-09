@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend  # NUEVO
 from rest_framework import filters  # NUEVO
-from .models import Producto, Pedido
+from .models import Producto, Pedido, Cliente
 from .serializers import ProductoSerializer, AdminLoginSerializer, PedidoSerializer
 from .permissions import IsAdminUserCustom
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -13,7 +13,9 @@ from rest_framework.decorators import api_view
 from django.conf import settings
 import requests
 import uuid
-from .serializers import ClienteRegistroSerializer, ClienteLoginSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from .serializers import ClienteRegistroSerializer, ClienteLoginSerializer, PedidoClienteSerializer
 
 
 
@@ -192,6 +194,14 @@ def crear_pedido(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=400)
     pedido = serializer.save()
+
+    # ← NUEVO: asociar cliente si está autenticado
+    if request.user.is_authenticated:
+        try:
+            pedido.cliente = request.user.cliente
+            pedido.save()
+        except Exception:
+            pass  # Si no tiene perfil cliente, el pedido igual se crea
     
     return Response({
         "mensaje": "Pedido creado",
@@ -227,18 +237,18 @@ def listar_pedidos(request):
 
 @api_view(['PATCH'])
 def actualizar_estado_pedido(request, numero_pedido):
-    """
-    Actualiza el estado de un pedido
-    Solo accesible para administradores
-    """
     try:
         pedido = Pedido.objects.get(numero_pedido=numero_pedido)
     except Pedido.DoesNotExist:
         return Response({"error": "Pedido no encontrado"}, status=404)
     
     nuevo_estado = request.data.get('estado')
-    if nuevo_estado not in ['pendiente', 'pagado', 'enviado', 'entregado', 'fallido']:
-        return Response({"error": "Estado inválido"}, status=400)
+    estados_validos = [choice[0] for choice in Pedido.ESTADOS]
+    
+    if nuevo_estado not in estados_validos:
+        return Response({
+            "error": f"Estado inválido. Estados válidos: {estados_validos}"
+        }, status=400)
     
     pedido.estado = nuevo_estado
     pedido.save()
@@ -274,7 +284,7 @@ def iniciar_pago(request):
     pedido.nombre = nombre if nombre else pedido.nombre
     pedido.email = email if email else pedido.email
     pedido.direccion = direccion if direccion else pedido.direccion
-    pedido.estado = "pagado"
+    pedido.estado = "comprado"
     
     # ← NUEVO: Descontar inventario automáticamente
     for item in pedido.carrito:
@@ -321,3 +331,19 @@ def verificar_pago(request, numero_pedido):
     return Response({
         "estado": pedido.estado
     })
+
+
+# Vista: listar pedidos del cliente autenticado
+class MisPedidosView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            cliente = request.user.cliente
+        except Cliente.DoesNotExist:
+            return Response({'error': 'No tienes un perfil de cliente.'}, status=403)
+
+        pedidos = cliente.pedidos.all().order_by('-fecha')
+        serializer = PedidoClienteSerializer(pedidos, many=True)
+        return Response(serializer.data)

@@ -169,3 +169,14 @@ CORS_ALLOW_ALL_ORIGINS = True
 WOMPI_PUBLIC_KEY = "pub_test_xxx"
 WOMPI_PRIVATE_KEY = "prv_test_xxx"
 WOMPI_URL = "https://sandbox.wompi.co/v1"
+
+# Al final del settings.py
+import os
+
+if os.environ.get('CI'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    }

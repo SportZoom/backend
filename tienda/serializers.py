@@ -42,10 +42,16 @@ class AdminLoginSerializer(serializers.Serializer):
         return data
   
 class PedidoSerializer(serializers.ModelSerializer):
+    estado_actual = serializers.SerializerMethodField()
+
     class Meta:
         model = Pedido
         fields = '__all__'
         read_only_fields = ['numero_pedido', 'fecha', 'estado', 'wompi_id']
+
+    def get_estado_actual(self, obj):
+        # Persiste el estado actualizado y lo devuelve
+        return obj.actualizar_estado()
 
 
 class ClienteRegistroSerializer(serializers.Serializer):
@@ -97,14 +103,21 @@ class ClienteLoginSerializer(serializers.Serializer):
 class PedidoClienteSerializer(serializers.ModelSerializer):
     cantidad_productos = serializers.SerializerMethodField()
     estado_display = serializers.SerializerMethodField()
+    estado_actual = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
-        fields = ['numero_pedido', 'fecha', 'total', 'estado', 'estado_display', 'cantidad_productos', 'carrito']
+        fields = [
+            'numero_pedido', 'fecha', 'total',
+            'estado', 'estado_actual', 'estado_display',
+            'cantidad_productos', 'carrito'
+        ]
 
     def get_cantidad_productos(self, obj):
         return sum(item.get('cantidad', 1) for item in obj.carrito)
 
     def get_estado_display(self, obj):
-        # Usa los choices del modelo directamente, soporta cambios futuros
         return dict(Pedido.ESTADOS).get(obj.estado, obj.estado)
+
+    def get_estado_actual(self, obj):
+        return obj.actualizar_estado()

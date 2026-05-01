@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
+from django.utils import timezone
 
 
 class Usuario(AbstractUser):
@@ -114,6 +115,26 @@ class Pedido(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADOS, default="comprado")
     wompi_id = models.CharField(max_length=100, blank=True, null=True)
     referencia_pago = models.CharField(max_length=150, null=True, blank=True)
+
+    # Dentro de la clase Pedido, antes del método save():
+    def estado_calculado(self):
+        """Calcula el estado según los días transcurridos desde la compra."""
+        dias = (timezone.now() - self.fecha).days
+        if dias >= 3:
+            return "entregado"
+        elif dias >= 2:
+            return "en_reparto"
+        elif dias >= 1:
+            return "enviado"
+        return "comprado"
+
+    def actualizar_estado(self):
+        """Persiste el estado en BD si ha cambiado respecto al calculado."""
+        nuevo_estado = self.estado_calculado()
+        if self.estado != nuevo_estado:
+            self.estado = nuevo_estado
+            self.save(update_fields=["estado"])
+        return self.estado
 
     def save(self, *args, **kwargs):
         if not self.numero_pedido:

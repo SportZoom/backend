@@ -329,7 +329,7 @@ def verificar_pago(request, numero_pedido):
         return Response({"error": "Pedido no existe"}, status=404)
 
     return Response({
-        "estado": pedido.estado
+        "estado": pedido.actualizar_estado()
     })
 
 

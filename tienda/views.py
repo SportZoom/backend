@@ -13,6 +13,10 @@ from rest_framework.decorators import api_view
 from django.conf import settings
 import requests
 import uuid
+import mercadopago
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import ClienteRegistroSerializer, ClienteLoginSerializer, PedidoClienteSerializer
@@ -286,23 +290,6 @@ def iniciar_pago(request):
     pedido.direccion = direccion if direccion else pedido.direccion
     pedido.estado = "comprado"
     
-    # ← NUEVO: Descontar inventario automáticamente
-    for item in pedido.carrito:
-        try:
-            producto = Producto.objects.get(id=item['id'])
-            cantidad_comprada = item.get('cantidad', 1)
-            
-            # Verificar que hay suficiente stock
-            if producto.stock >= cantidad_comprada:
-                producto.stock -= cantidad_comprada
-                producto.save()
-                print(f"✅ Inventario actualizado: {producto.nombre} - Stock restante: {producto.stock}")
-            else:
-                print(f"⚠️ Stock insuficiente para {producto.nombre}: solicitado {cantidad_comprada}, disponible {producto.stock}")
-        except Producto.DoesNotExist:
-            print(f"❌ Producto {item['id']} no encontrado")
-            continue
-    
     pedido.save()
 
     print(f"💾 Pedido guardado - Email: {pedido.email}, Dirección: {pedido.direccion}")
@@ -347,3 +334,153 @@ class MisPedidosView(APIView):
         pedidos = cliente.pedidos.all().order_by('-fecha')
         serializer = PedidoClienteSerializer(pedidos, many=True)
         return Response(serializer.data)
+
+def get_mp_sdk():
+    return mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+
+@api_view(['POST'])
+def crear_preferencia_mp(request):
+    try:
+        numero_pedido = request.data.get('numero_pedido')
+        print(f"🔍 Buscando pedido: {numero_pedido}")
+
+        try:
+            pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+        except Pedido.DoesNotExist:
+            return Response({'error': 'Pedido no encontrado'}, status=404)
+
+        print(f"✅ Pedido encontrado: {pedido}")
+        print(f"🛒 Carrito: {pedido.carrito}")
+
+        sdk = get_mp_sdk()
+
+        items = []
+        for item in pedido.carrito:
+            print(f"📦 Procesando item: {item}")
+            items.append({
+                "id": str(item.get('id')),
+                "title": str(item.get('nombre', 'Producto')),
+                "quantity": int(item.get('cantidad', 1)),
+                "unit_price": float(item.get('precio', 0)),
+                "currency_id": "COP",
+            })
+
+        print(f"📋 Items construidos: {items}")
+
+        preference_data = {
+            "items": items,
+            "payer": {
+                "email": pedido.email or "test@test.com",
+                "name": pedido.nombre or "Cliente",
+            },
+            "back_urls": {
+                "success": f"{settings.FRONTEND_URL}/confirmacion",
+                "failure": f"{settings.FRONTEND_URL}/confirmacion",
+                "pending": f"{settings.FRONTEND_URL}/confirmacion",
+            },
+            "external_reference": pedido.numero_pedido,
+            "statement_descriptor": "SPORTZOOM",
+        }
+
+        print(f"📤 Enviando a MP: {preference_data}")
+
+        result = sdk.preference().create(preference_data)
+        print(f"📥 Respuesta MP status: {result['status']}")
+        print(f"📥 Respuesta MP response: {result['response']}")
+
+        preference = result["response"]
+
+        if result["status"] != 201:
+            return Response({'error': 'Error creando preferencia', 'detalle': preference}, status=500)
+
+        from .models import PagoMercadoPago
+        PagoMercadoPago.objects.update_or_create(
+            pedido=pedido,
+            defaults={
+                'preference_id': preference['id'],
+                'monto': pedido.total,
+            }
+        )
+        pedido.referencia_pago = preference['id']
+        pedido.save()
+
+        return Response({
+            'preference_id': preference['id'],
+            'sandbox_init_point': preference['sandbox_init_point'],
+            'init_point': preference['init_point'],
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"❌ ERROR COMPLETO: {str(e)}")
+        print(traceback.format_exc())
+        return Response({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def webhook_mp(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    topic = data.get('type') or request.GET.get('topic')
+
+    if topic == 'payment':
+        payment_id = (data.get('data') or {}).get('id') or request.GET.get('id')
+
+        sdk = get_mp_sdk()
+        payment_info = sdk.payment().get(payment_id)
+        payment = payment_info["response"]
+
+        numero_pedido = payment.get('external_reference')
+        estado_mp = payment.get('status')  # approved, rejected, pending
+
+        try:
+            pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+            from .models import PagoMercadoPago
+            pago, _ = PagoMercadoPago.objects.get_or_create(
+                pedido=pedido,
+                defaults={'monto': pedido.total}
+            )
+            pago.payment_id = str(payment_id)
+            pago.estado = estado_mp
+            pago.save()
+
+            # Si el pago fue aprobado, descontar inventario
+            if estado_mp == 'approved' and pedido.estado == 'comprado':
+                for item in pedido.carrito:
+                    try:
+                        producto = Producto.objects.get(id=item['id'])
+                        cantidad = int(item.get('cantidad', 1))
+                        if producto.stock >= cantidad:
+                            producto.stock -= cantidad
+                            producto.save()
+                    except Producto.DoesNotExist:
+                        pass
+
+                pedido.wompi_id = str(payment_id)
+                pedido.save()
+
+        except Pedido.DoesNotExist:
+            pass
+
+    return JsonResponse({'status': 'ok'})
+
+
+@api_view(['GET'])
+def estado_pago_mp(request, numero_pedido):
+    try:
+        pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+        from .models import PagoMercadoPago
+        pago = PagoMercadoPago.objects.get(pedido=pedido)
+        return Response({
+            'estado': pago.estado,
+            'payment_id': pago.payment_id,
+            'monto': str(pago.monto),
+        })
+    except (Pedido.DoesNotExist, PagoMercadoPago.DoesNotExist):
+        return Response({'estado': 'pending', 'payment_id': '', 'monto': '0'})

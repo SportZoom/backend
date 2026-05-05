@@ -248,9 +248,11 @@ dependencies = [
     { name = "djangorestframework" },
     { name = "djangorestframework-simplejwt" },
     { name = "idna" },
+    { name = "mercadopago" },
     { name = "pillow" },
     { name = "psycopg2-binary" },
     { name = "pyjwt" },
+    { name = "python-dotenv" },
     { name = "requests" },
     { name = "sqlparse" },
     { name = "typing-extensions" },
@@ -271,14 +273,28 @@ requires-dist = [
     { name = "djangorestframework", specifier = "==3.16.1" },
     { name = "djangorestframework-simplejwt", specifier = "==5.5.1" },
     { name = "idna", specifier = "==3.11" },
+    { name = "mercadopago", specifier = ">=2.4.0" },
     { name = "pillow", specifier = "==11.3.0" },
     { name = "psycopg2-binary", specifier = "==2.9.10" },
     { name = "pyjwt", specifier = "==2.10.1" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = "==2.32.5" },
     { name = "sqlparse", specifier = "==0.5.3" },
     { name = "typing-extensions", specifier = "==4.15.0" },
     { name = "tzdata", specifier = "==2025.2" },
     { name = "urllib3", specifier = "==2.5.0" },
+]
+
+[[package]]
+name = "mercadopago"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/79/d9/698f538896728da7fc45a5930c9d8f93340d61caefbf06a9e3e8c6e6e652/mercadopago-2.4.0.tar.gz", hash = "sha256:d18fa8589a88b3847629cfb79d020e054c3c668830ddefcad591a20b1f28b3d6", size = 24549, upload-time = "2026-04-17T18:47:04.243Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/b3/86b8f603349783f522ac80a83eeaffb6c5b5dcc4e084fc3ebf66ffe57aab/mercadopago-2.4.0-py3-none-any.whl", hash = "sha256:839a9612b99d50cb40a8ffda5f311753ceedae3b2b95a70bf4941adcd2a62ecd", size = 36353, upload-time = "2026-04-17T18:47:03.284Z" },
 ]
 
 [[package]]
@@ -362,6 +378,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e7/46/bd74733ff231675599650d3e47f361794b22ef3e3770998dda30d3b63726/pyjwt-2.10.1.tar.gz", hash = "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953", size = 87785, upload-time = "2024-11-28T03:43:29.933Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl", hash = "sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb", size = 22997, upload-time = "2024-11-28T03:43:27.893Z" },
+]
+
+[[package]]
+name = "python-dotenv"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/ed/0301aeeac3e5353ef3d94b6ec08bbcabd04a72018415dcb29e588514bba8/python_dotenv-1.2.2.tar.gz", hash = "sha256:2c371a91fbd7ba082c2c1dc1f8bf89ca22564a087c2c287cd9b662adde799cf3", size = 50135, upload-time = "2026-03-01T16:00:26.196Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl", hash = "sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a", size = 22101, upload-time = "2026-03-01T16:00:25.09Z" },
 ]
 
 [[package]]

@@ -143,3 +143,33 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f"Pedido {self.numero_pedido}"
+
+
+
+class PagoMercadoPago(models.Model):
+    ESTADOS = [
+        ('pending', 'Pendiente'),
+        ('approved', 'Aprobado'),
+        ('rejected', 'Rechazado'),
+        ('cancelled', 'Cancelado'),
+        ('in_process', 'En proceso'),
+    ]
+    pedido = models.OneToOneField(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name='pago_mp'
+    )
+    preference_id = models.CharField(max_length=255, blank=True)
+    payment_id = models.CharField(max_length=255, blank=True)
+    estado = models.CharField(max_length=50, choices=ESTADOS, default='pending')
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Pago {self.payment_id} - {self.estado} - Pedido {self.pedido.numero_pedido}"
+
+    class Meta:
+        db_table = 'tienda_pago_mercadopago'
+        verbose_name = 'Pago Mercado Pago'
+        verbose_name_plural = 'Pagos Mercado Pago'

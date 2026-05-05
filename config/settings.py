@@ -11,10 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -180,3 +182,20 @@ if os.environ.get('CI'):
             'NAME': BASE_DIR / 'test_db.sqlite3',
         }
     }
+
+MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+
+
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+        },
+    },
+}

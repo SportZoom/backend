@@ -231,7 +231,7 @@ ProyectoIntegrado-SportZoom-2025/
 
 - **Max Daniel Pérez Quintero** - Ingeniería en Sistemas - Universidad de Antioquia
 - **Santiago Villegas Naranjo** - Ingeniería en Sistemas - Universidad de Antioquia  
-- **Camilo Marsel Areiza Céspedes** - Ingeniería en Sistemas - Universidad de Antioquia
+- **Ricardo Medina Herrera** - Ingeniería en Sistemas - Universidad de Antioquia
 
 ---
 

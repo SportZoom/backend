@@ -12,213 +12,265 @@ Hoy en día, vender calzado en Colombia no es tan sencillo, sobre todo para los 
 
 ---
 
-## ✨ Características Principales
+# ✨ Características Principales
 
-### Para Compradores
-- 🛍️ **Catálogo organizado** con filtros por marca, talla y precio
-- 🔍 **Búsqueda avanzada** de productos
-- 🛒 **Carrito de compras** intuitivo
-- 💳 **Checkout simplificado** con simulación de pago
-- 📧 **Confirmación por email** con detalles del pedido
-- 📦 **Consulta de pedidos** mediante código único
+## Para Compradores
 
-### Para Administradores
-- ➕ **CRUD completo** de productos
-- 📊 **Gestión de inventario** en tiempo real
-- 🏷️ **Organización por marcas y tallas**
-- 🔐 **Autenticación JWT** segura
-- 👤 **Panel administrativo** dedicado
+- 🛍️ Catálogo organizado con filtros por marca, talla y precio
+- 🔍 Búsqueda avanzada de productos
+- 🛒 Carrito de compras intuitivo
+- 💳 Checkout simplificado con simulación de pago
+- 📧 Confirmación por email con detalles del pedido
+- 📦 Consulta de pedidos mediante código único
 
----
+## Para Administradores
 
-## 🛠️ Tecnologías Utilizadas
-
-### Backend
-- **Framework:** Django 5.2.6
-- **API:** Django REST Framework 3.16.1
-- **Base de Datos:** PostgreSQL
-- **Autenticación:** JWT (djangorestframework-simplejwt)
-- **Manejo de imágenes:** Pillow
-- **CORS:** django-cors-headers
-
-### Frontend
-- **Framework:** Angular 20
-- **Estilos:** Tailwind CSS 3.4
-- **HTTP Client:** RxJS
-- **Email:** EmailJS
-- **PDF:** jsPDF
-
-### Herramientas de Desarrollo
-- **Control de versiones:** Git / GitHub
-- **Cliente Git:** GitKraken
-- **Gestión de entorno:** Python venv / Node.js npm
+- ➕ CRUD completo de productos
+- 📊 Gestión de inventario en tiempo real
+- 🏷️ Organización por marcas y tallas
+- 🔐 Autenticación JWT segura
+- 👤 Panel administrativo dedicado
 
 ---
 
-## 📦 Instalación y Configuración
+# 🛠️ Tecnologías Utilizadas
 
-### Prerrequisitos
+## Backend
+
+- Django 5.2.6
+- Django REST Framework 3.16.1
+- PostgreSQL (Supabase)
+- Supabase Storage
+- JWT
+- Pillow
+- django-cors-headers
+
+## Frontend
+
+- Angular 20
+- Tailwind CSS 3.4
+- RxJS
+- EmailJS
+- jsPDF
+
+## Herramientas
+
+- Git / GitHub
+- GitKraken
+- Python venv
+- Node.js npm
+
+---
+
+# 📦 Instalación y Configuración
+
+## Prerrequisitos
 
 - Python 3.8+
-- Node.js 18+ y npm
-- PostgreSQL 12+
+- Node.js 18+
+- npm
 - Git
+- Cuenta en Supabase
 
-### 1️⃣ Clonar el Repositorio
+---
+
+# 1️⃣ Clonar el repositorio
+
 ```bash
 git clone https://github.com/tu-usuario/ProyectoIntegrado-SportZoom-2025.git
 cd ProyectoIntegrado-SportZoom-2025
 ```
 
-### 2️⃣ Configurar el Backend (Django)
+---
 
-#### Crear y activar entorno virtual
+# 2️⃣ Configurar Backend (Django)
+
+## Entrar al backend
+
 ```bash
 cd backend
-
-# Windows
-python -m venv .venv
-.venv\Scripts\activate
-
-# Linux/Mac
-python3 -m venv .venv
-source .venv/bin/activate
 ```
 
-#### Instalar dependencias
+---
+
+## Crear entorno virtual
+
+### Windows
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+### Linux / Mac
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+## Instalar dependencias
+
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Configurar PostgreSQL
+---
 
-Crear la base de datos en PostgreSQL:
-```sql
-CREATE DATABASE sportzoom;
-CREATE USER sportzoom_user WITH PASSWORD 'ClaveSportzoom123';
-GRANT ALL PRIVILEGES ON DATABASE sportzoom TO sportzoom_user;
+# Configurar variables de entorno (.env)
+
+Crear un archivo llamado `.env` dentro de la carpeta `backend`.
+
+Contenido:
+
+```env
+SECRET_KEY=tu-secret-key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+DATABASE_URL=postgresql://USUARIO:PASSWORD@HOST:6543/postgres
+
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_SERVICE_KEY=TU_SERVICE_ROLE_KEY
+SUPABASE_STORAGE_BUCKET=Productos
+
+FRONTEND_URL=http://localhost:4200
+MP_ACCESS_TOKEN=
 ```
 
-#### Aplicar migraciones
+⚠️ El archivo `.env` NO debe subirse a GitHub.
+
+Cada integrante del equipo debe copiar manualmente el `.env` en su entorno local.
+
+---
+
+# Configuración de Supabase
+
+El proyecto utiliza:
+
+- Supabase PostgreSQL como base de datos principal
+- Supabase Storage para almacenar imágenes de productos
+
+Todos los desarrolladores trabajan sobre la misma base de datos cloud mediante `DATABASE_URL`.
+
+---
+
+# Aplicar migraciones
+
 ```bash
-python manage.py makemigrations
 python manage.py migrate
 ```
 
-#### Crear superusuario (administrador)
+---
+
+# Crear superusuario
+
 ```bash
 python manage.py createsuperuser
 ```
 
-#### Ejecutar el servidor backend
+---
+
+# Ejecutar backend
+
 ```bash
 python manage.py runserver
 ```
 
-El backend estará disponible en: **http://localhost:8000**
+Backend disponible en:
+
+```text
+http://localhost:8000
+```
 
 ---
 
-### 3️⃣ Configurar el Frontend (Angular)
+# 3️⃣ Configurar Frontend (Angular)
 
 Abrir una nueva terminal:
+
 ```bash
 cd frontend
 ```
 
-#### Instalar dependencias
+---
+
+# Instalar dependencias frontend
+
 ```bash
 npm install
 ```
 
-#### Ejecutar el servidor de desarrollo
+---
+
+# Ejecutar frontend
+
 ```bash
 npm start
-# o alternativamente
+```
+
+o:
+
+```bash
 ng serve
 ```
 
-El frontend estará disponible en: **http://localhost:4200**
+Frontend disponible en:
 
----
-
-## 🚀 Uso del Sistema
-
-### Acceso a la Aplicación
-
-1. **Usuario Comprador:**
-   - Accede a `http://localhost:4200`
-   - Navega por el catálogo
-   - Agrega productos al carrito
-   - Completa el checkout
-   - Consulta tu pedido con el código recibido
-
-2. **Administrador:**
-   - Accede a `http://localhost:4200/login`
-   - Inicia sesión con las credenciales de superusuario
-   - Gestiona productos, inventario y pedidos desde el panel administrativo
-
-### Comandos Útiles
-
-#### Backend
-```bash
-# Correr servidor
-python manage.py runserver
-
-# Crear migraciones
-python manage.py makemigrations
-
-# Aplicar migraciones
-python manage.py migrate
-
-# Crear superusuario
-python manage.py createsuperuser
-
-# Acceder al shell de Django
-python manage.py shell
-```
-
-#### Frontend
-```bash
-# Correr desarrollo
-npm start
-
-# Compilar para producción
-npm run build
-
-# Ejecutar tests
-npm test
+```text
+http://localhost:4200
 ```
 
 ---
 
-## 📂 Estructura del Proyecto
-```
+# 🚀 Uso del Sistema
+
+## Usuario Comprador
+
+1. Acceder a:
+   ```
+   http://localhost:4200
+   ```
+
+2. Navegar por productos
+
+3. Agregar productos al carrito
+
+4. Realizar checkout
+
+5. Consultar pedidos mediante código
+
+---
+
+## Administrador
+
+1. Acceder a:
+   ```
+   http://localhost:4200/login
+   ```
+
+2. Iniciar sesión con superusuario
+
+3. Gestionar productos e inventario
+
+---
+
+# 📂 Estructura del Proyecto
+
+```text
 ProyectoIntegrado-SportZoom-2025/
 ├── backend/
-│   ├── config/              # Configuración del proyecto Django
-│   ├── tienda/              # App principal
-│   │   ├── models.py        # Modelos (Usuario, Producto, Pedido)
-│   │   ├── views.py         # Vistas y endpoints API
-│   │   ├── serializers.py   # Serializadores DRF
-│   │   ├── urls.py          # Rutas de la API
-│   │   └── permissions.py   # Permisos personalizados
-│   ├── media/               # Imágenes de productos
+│   ├── config/
+│   ├── tienda/
 │   ├── manage.py
-│   └── requirements.txt
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── .env
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── app/
-│   │   │   ├── tienda/           # Componente catálogo
-│   │   │   ├── carrito/          # Componente carrito
-│   │   │   ├── checkout/         # Componente pago
-│   │   │   ├── confirmacion/     # Componente confirmación
-│   │   │   ├── consulta-pedido/  # Componente consulta
-│   │   │   ├── login/            # Componente login admin
-│   │   │   └── services/         # Servicios HTTP
-│   │   ├── index.html
-│   │   └── styles.css
 │   ├── package.json
 │   └── angular.json
 │
@@ -227,40 +279,14 @@ ProyectoIntegrado-SportZoom-2025/
 
 ---
 
-## 👥 Equipo de Desarrollo
+# 👥 Equipo de Desarrollo
 
-- **Max Daniel Pérez Quintero** - Ingeniería en Sistemas - Universidad de Antioquia
-- **Santiago Villegas Naranjo** - Ingeniería en Sistemas - Universidad de Antioquia  
-- **Ricardo Medina Herrera** - Ingeniería en Sistemas - Universidad de Antioquia
-
----
-
-## 📅 Cronograma
-
-- **Inicio:** 19 de agosto de 2025
-- **Entrega:** 25 de noviembre de 2025
-- **Sustentación:** 2 de diciembre de 2025
+- Max Daniel Pérez Quintero
+- Santiago Villegas Naranjo
+- Ricardo Medina Herrera
 
 ---
 
-## 🔮 Próximas Características
+# 📄 Licencia
 
-- [ ] Integración real con pasarela de pago Wompi
-- [ ] Sistema de reseñas y valoraciones
-- [ ] Historial de pedidos para usuarios registrados
-- [ ] Reportes de ventas y análisis de inventario
-- [ ] Despliegue en servidor de producción
-- [ ] Notificaciones push
-- [ ] Gestión de múltiples imágenes por producto
-
----
-
-## 📄 Licencia
-
-Este proyecto es un trabajo académico desarrollado para la Universidad de Antioquia.
-
----
-
-## 📧 Contacto
-
-Para consultas o soporte: **sportzoom300@gmail.com**
+Proyecto académico desarrollado para la Universidad de Antioquia.

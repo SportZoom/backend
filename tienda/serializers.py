@@ -4,8 +4,10 @@ from django.contrib.auth import authenticate
 from .models import Pedido
 from django.contrib.auth.password_validation import validate_password
 from .models import Cliente, Usuario
+from .storage import upload_product_image
 
 class ProductoSerializer(serializers.ModelSerializer):
+    imagen = serializers.FileField(write_only=True, required=False, allow_null=True)
     imagen_url = serializers.SerializerMethodField(read_only=True)
     disponibilidad = serializers.SerializerMethodField(read_only=True)
     
@@ -18,15 +20,28 @@ class ProductoSerializer(serializers.ModelSerializer):
         }
         
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['imagen'] = instance.imagen
+        return data
+
     def get_imagen_url(self, obj):
-        request = self.context.get('request')
-        if obj.imagen:
-            url = obj.imagen.url
-            return request.build_absolute_uri(url) if request else url
-        return None
+        return obj.imagen or None
 
     def get_disponibilidad(self, obj):
         return 'Disponible' if obj.stock > 0 else 'Agotado'
+
+    def create(self, validated_data):
+        uploaded_image = validated_data.pop('imagen', None)
+        if uploaded_image:
+            validated_data['imagen'] = upload_product_image(uploaded_image)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        uploaded_image = validated_data.pop('imagen', None)
+        if uploaded_image:
+            validated_data['imagen'] = upload_product_image(uploaded_image)
+        return super().update(instance, validated_data)
 
 class AdminLoginSerializer(serializers.Serializer):
     username = serializers.CharField()

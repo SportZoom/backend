@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,12 +25,19 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--ip(f$p7hr&s+kwz(*gqnaa+4e07zfixp9%@_#-+fbuvudf8wb'
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure--ip(f$p7hr&s+kwz(*gqnaa+4e07zfixp9%@_#-+fbuvudf8wb',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -81,15 +91,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise ImproperlyConfigured(
+        'DATABASE_URL must be set with the shared Supabase PostgreSQL connection string.'
+    )
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sportzoom',
-        'USER': 'sportzoom_user',
-        'PASSWORD': 'ClaveSportzoom123',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
 
 
@@ -128,10 +141,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
-
-# Archivos multimedia (subida de imágenes)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
@@ -172,19 +181,11 @@ WOMPI_PUBLIC_KEY = "pub_test_xxx"
 WOMPI_PRIVATE_KEY = "prv_test_xxx"
 WOMPI_URL = "https://sandbox.wompi.co/v1"
 
-# Al final del settings.py
-import os
-
-if os.environ.get('CI'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'test_db.sqlite3',
-        }
-    }
-
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+SUPABASE_STORAGE_BUCKET = os.environ.get('SUPABASE_STORAGE_BUCKET', 'Productos')
 
 
 LOGGING = {

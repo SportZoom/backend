@@ -80,7 +80,7 @@ class Producto(models.Model):
     stock = models.PositiveIntegerField(default=0)
     marca = models.CharField(max_length=50, choices=MARCAS, default='Otra')  # NUEVO
     talla = models.CharField(max_length=10, choices=TALLAS, default='40')    # NUEVO
-    imagen = models.ImageField(upload_to='productos/', null=True, blank=True)
+    imagen = models.URLField(max_length=500, null=True, blank=True)
     creado = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -118,22 +118,25 @@ class Pedido(models.Model):
 
     # Dentro de la clase Pedido, antes del método save():
     def estado_calculado(self):
-        """Calcula el estado según los días transcurridos desde la compra."""
+        """Calcula el estado mínimo según días transcurridos."""
         dias = (timezone.now() - self.fecha).days
-        if dias >= 3:
-            return "entregado"
-        elif dias >= 2:
-            return "en_reparto"
-        elif dias >= 1:
-            return "enviado"
+        if dias >= 3:   return "entregado"
+        elif dias >= 2: return "en_reparto"
+        elif dias >= 1: return "enviado"
         return "comprado"
 
     def actualizar_estado(self):
-        """Persiste el estado en BD si ha cambiado respecto al calculado."""
-        nuevo_estado = self.estado_calculado()
-        if self.estado != nuevo_estado:
-            self.estado = nuevo_estado
+        """Avanza el estado si el automático supera al actual. Nunca retrocede."""
+        orden = ["comprado", "enviado", "en_reparto", "entregado"]
+        
+        estado_auto = self.estado_calculado()
+        idx_actual = orden.index(self.estado) if self.estado in orden else 0
+        idx_auto   = orden.index(estado_auto) if estado_auto in orden else 0
+
+        if idx_auto > idx_actual:
+            self.estado = estado_auto
             self.save(update_fields=["estado"])
+
         return self.estado
 
     def save(self, *args, **kwargs):

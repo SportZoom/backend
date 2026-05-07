@@ -62,7 +62,7 @@ class PedidoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pedido
         fields = '__all__'
-        read_only_fields = ['numero_pedido', 'fecha', 'estado', 'wompi_id']
+        read_only_fields = ['numero_pedido', 'fecha', 'wompi_id']
 
     def get_estado_actual(self, obj):
         # Persiste el estado actualizado y lo devuelve

@@ -24,6 +24,7 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           CI: true
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           uv run coverage run --source=tienda manage.py test tienda
           uv run coverage xml -o coverage.xml

@@ -26,7 +26,7 @@ jobs:
           CI: true
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          uv run coverage run --source=tienda manage.py test tienda
+          uv run coverage run --source=tienda manage.py test tienda --keepdb
           uv run coverage xml -o coverage.xml
 
       - name: SonarQube Scan

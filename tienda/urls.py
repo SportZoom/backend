@@ -13,7 +13,7 @@ from .views import verificar_pago
 from .views import consultar_pedido
 from .views import listar_pedidos, actualizar_estado_pedido
 from .views import MisPedidosView
-from .views import crear_preferencia_mp, webhook_mp, estado_pago_mp
+from .views import crear_preferencia_mp, webhook_mp, estado_pago_mp, aprobar_pago_demo
 
 router = DefaultRouter()
 router.register(r'productos', ProductoViewSet, basename='producto')
@@ -35,6 +35,7 @@ urlpatterns = [
     path('clientes/login/', ClienteLoginView.as_view(), name='cliente-login'),
     path('clientes/mis-pedidos/', MisPedidosView.as_view(), name='mis-pedidos'),
     path('pagos/crear-preferencia/', crear_preferencia_mp, name='crear-preferencia-mp'),
+    path('pagos/demo-aprobado/<str:numero_pedido>/', aprobar_pago_demo, name='demo-pago-aprobado'),
     path('pagos/webhook/', webhook_mp, name='webhook-mp'),
     path('pagos/estado/<str:numero_pedido>/', estado_pago_mp, name='estado-pago-mp'),
 ]

@@ -2,9 +2,10 @@ from rest_framework import generics, permissions, status, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend  # NUEVO
 from rest_framework import filters  # NUEVO
-from .models import Producto, Pedido, Cliente
+from .models import Producto, Pedido, Cliente, PagoMercadoPago
 from .serializers import ProductoSerializer, AdminLoginSerializer, PedidoSerializer
 from .permissions import IsAdminUserCustom
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -337,6 +338,70 @@ class MisPedidosView(APIView):
 
 def get_mp_sdk():
     return mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+
+
+def descontar_stock_pedido(pedido):
+    for item in pedido.carrito:
+        try:
+            producto = Producto.objects.get(id=item['id'])
+            cantidad = int(item.get('cantidad', 1))
+            if producto.stock >= cantidad:
+                producto.stock -= cantidad
+                producto.save(update_fields=['stock'])
+        except Producto.DoesNotExist:
+            pass
+
+
+def aprobar_pago_pedido_debug(numero_pedido):
+    with transaction.atomic():
+        pedido = Pedido.objects.select_for_update().get(numero_pedido=numero_pedido)
+        referencia = f"DEMO-{pedido.numero_pedido}-{uuid.uuid4().hex[:10].upper()}"
+
+        pago, creado = PagoMercadoPago.objects.select_for_update().get_or_create(
+            pedido=pedido,
+            defaults={
+                'monto': pedido.total,
+                'preference_id': referencia,
+                'payment_id': referencia,
+                'estado': 'approved',
+            }
+        )
+
+        ya_estaba_aprobado = not creado and pago.estado == 'approved'
+        pago.preference_id = pago.preference_id or referencia
+        pago.payment_id = pago.payment_id or referencia
+        pago.estado = 'approved'
+        pago.monto = pedido.total
+        pago.save()
+
+        if not ya_estaba_aprobado:
+            descontar_stock_pedido(pedido)
+
+        pedido.estado = 'comprado'
+        pedido.wompi_id = pago.payment_id
+        pedido.referencia_pago = pago.preference_id
+        pedido.save(update_fields=['estado', 'wompi_id', 'referencia_pago'])
+
+    return pedido, pago
+
+
+@api_view(['POST'])
+def aprobar_pago_demo(request, numero_pedido):
+    if not settings.DEBUG:
+        return Response({'error': 'Endpoint no disponible'}, status=404)
+
+    try:
+        pedido, pago = aprobar_pago_pedido_debug(numero_pedido)
+        return Response({
+            'mensaje': 'Pago aprobado',
+            'numero_pedido': pedido.numero_pedido,
+            'estado_pedido': pedido.estado,
+            'estado_pago': pago.estado,
+            'referencia_pago': pedido.referencia_pago,
+            'payment_id': pago.payment_id,
+        })
+    except Pedido.DoesNotExist:
+        return Response({'error': 'Pedido no encontrado'}, status=404)
 
 @api_view(['POST'])
 def crear_preferencia_mp(request):

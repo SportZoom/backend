@@ -12,6 +12,7 @@ ENV/
 # Archivos de configuración local
 *.env
 *.env.*
+!.env.example
 
 # Archivos de base de datos local
 db.sqlite3
@@ -119,3 +120,4 @@ node_modules/
 # ✅ FIN
 # =======================================
 .env
+.env.example

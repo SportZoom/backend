@@ -157,6 +157,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",  
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://tienda-backend-2g3c.onrender.com",
+]
+
 # Modelo de usuario personalizado
 AUTH_USER_MODEL = 'tienda.Usuario'
 
@@ -185,7 +189,6 @@ SIMPLE_JWT = {
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CORS_ALLOW_ALL_ORIGINS = True
 
 WOMPI_PUBLIC_KEY = "pub_test_xxx"
 WOMPI_PRIVATE_KEY = "prv_test_xxx"

@@ -154,7 +154,7 @@ if not DEBUG:
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",  
+    "https://frontend-sportzoom.vercel.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [

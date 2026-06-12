@@ -12,6 +12,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import PedidoSerializer
 from rest_framework.decorators import api_view
 from django.conf import settings
+from django.utils import timezone
 import hashlib
 import requests
 import uuid

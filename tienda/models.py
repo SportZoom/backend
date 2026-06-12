@@ -94,6 +94,7 @@ class Producto(models.Model):
 
 class Pedido(models.Model):
     ESTADOS = (
+        ("pendiente", "Pendiente"),
         ("comprado", "Comprado"),
         ("enviado", "Enviado"),
         ("en_reparto", "En reparto"),
@@ -112,13 +113,15 @@ class Pedido(models.Model):
     fecha = models.DateTimeField(auto_now_add=True)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     carrito = models.JSONField()
-    estado = models.CharField(max_length=20, choices=ESTADOS, default="comprado")
+    estado = models.CharField(max_length=20, choices=ESTADOS, default="pendiente")
     wompi_id = models.CharField(max_length=100, blank=True, null=True)
     referencia_pago = models.CharField(max_length=150, null=True, blank=True)
 
-    # Dentro de la clase Pedido, antes del método save():
     def estado_calculado(self):
-        """Calcula el estado mínimo según días transcurridos."""
+        """Calcula el estado mínimo según días transcurridos.
+        No avanza desde pendiente ni comprado por tiempo."""
+        if self.estado == "pendiente":
+            return "pendiente"
         dias = (timezone.now() - self.fecha).days
         if dias >= 3:   return "entregado"
         elif dias >= 2: return "en_reparto"
@@ -127,8 +130,8 @@ class Pedido(models.Model):
 
     def actualizar_estado(self):
         """Avanza el estado si el automático supera al actual. Nunca retrocede."""
-        orden = ["comprado", "enviado", "en_reparto", "entregado"]
-        
+        orden = ["pendiente", "comprado", "enviado", "en_reparto", "entregado"]
+
         estado_auto = self.estado_calculado()
         idx_actual = orden.index(self.estado) if self.estado in orden else 0
         idx_auto   = orden.index(estado_auto) if estado_auto in orden else 0

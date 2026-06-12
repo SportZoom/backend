@@ -190,9 +190,10 @@ SIMPLE_JWT = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-WOMPI_PUBLIC_KEY = "pub_test_xxx"
-WOMPI_PRIVATE_KEY = "prv_test_xxx"
-WOMPI_URL = "https://sandbox.wompi.co/v1"
+WOMPI_PUBLIC_KEY = os.environ.get('WOMPI_PUBLIC_KEY', '')
+WOMPI_INTEGRITY_SECRET = os.environ.get('WOMPI_INTEGRITY_SECRET', '')
+WOMPI_EVENTS_SECRET = os.environ.get('WOMPI_EVENTS_SECRET', '')
+WOMPI_URL = os.environ.get('WOMPI_URL', 'https://sandbox.wompi.co/v1')
 
 MP_ACCESS_TOKEN = os.environ.get('MP_ACCESS_TOKEN', '')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:4200')

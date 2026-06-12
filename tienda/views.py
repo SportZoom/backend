@@ -12,6 +12,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import PedidoSerializer
 from rest_framework.decorators import api_view
 from django.conf import settings
+import hashlib
 import requests
 import uuid
 import mercadopago
@@ -549,3 +550,173 @@ def estado_pago_mp(request, numero_pedido):
         })
     except (Pedido.DoesNotExist, PagoMercadoPago.DoesNotExist):
         return Response({'estado': 'pending', 'payment_id': '', 'monto': '0'})
+
+
+# ======================================
+#  WOMPI INTEGRATION
+# ======================================
+
+def generar_firma_integridad(reference, amount_in_cents, currency):
+    """Genera firma SHA256 para Wompi según documentación.
+    Concatena: reference + amount_in_cents + currency + integrity_secret"""
+    integrity_secret = settings.WOMPI_INTEGRITY_SECRET
+    cadena = f"{reference}{amount_in_cents}{currency}{integrity_secret}"
+    return hashlib.sha256(cadena.encode('utf-8')).hexdigest()
+
+
+@api_view(['POST'])
+def wompi_init_payment(request):
+    """Genera los parámetros necesarios para abrir el Widget de Wompi.
+    La firma de integridad se genera exclusivamente en el backend."""
+    numero_pedido = request.data.get('numero_pedido')
+    if not numero_pedido:
+        return Response({"error": "numero_pedido es requerido"}, status=400)
+
+    try:
+        pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+    except Pedido.DoesNotExist:
+        return Response({"error": "Pedido no encontrado"}, status=404)
+
+    # Generar referencia única para Wompi
+    reference = f"PEDIDO-{pedido.numero_pedido}-{int(timezone.now().timestamp())}"
+
+    # Calcular monto en centavos (COP, sin decimales)
+    amount_in_cents = int(float(pedido.total) * 100)
+
+    currency = "COP"
+
+    # Generar firma de integridad en el servidor
+    signature_integrity = generar_firma_integridad(reference, amount_in_cents, currency)
+
+    # Guardar la referencia en el pedido para trazabilidad
+    pedido.referencia_pago = reference
+    pedido.save(update_fields=['referencia_pago'])
+
+    return Response({
+        "currency": currency,
+        "amount_in_cents": amount_in_cents,
+        "reference": reference,
+        "public_key": settings.WOMPI_PUBLIC_KEY,
+        "signature_integrity": signature_integrity,
+        "redirect_url": f"{settings.FRONTEND_URL}/confirmacion",
+    })
+
+
+@csrf_exempt
+def wompi_webhook(request):
+    """Recibe eventos de Wompi (transaction.updated).
+    Verifica la firma del evento antes de procesarlo."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    event = data.get('event')
+    environment = data.get('environment', 'test')
+
+    # Solo procesar eventos de transacciones
+    if event != 'transaction.updated':
+        return JsonResponse({'status': 'ignored'})
+
+    # --- Verificación de firma del evento (seguridad) ---
+    signature = data.get('signature', {})
+    properties = signature.get('properties', [])
+    checksum_recibido = signature.get('checksum', '')
+    timestamp = data.get('timestamp', '')
+
+    if properties and checksum_recibido:
+        # Construir cadena para verificar: valores de properties + timestamp + events_secret
+        transaction = data.get('data', {}).get('transaction', {})
+        valores = []
+        for prop in properties:
+            partes = prop.split('.')
+            valor = transaction
+            try:
+                for parte in partes:
+                    valor = valor[parte]
+            except (KeyError, TypeError):
+                valor = ''
+            valores.append(str(valor) if valor is not None else '')
+
+        cadena_verificacion = ''.join(valores) + str(timestamp) + settings.WOMPI_EVENTS_SECRET
+        checksum_calculado = hashlib.sha256(cadena_verificacion.encode('utf-8')).hexdigest().upper()
+
+        if checksum_calculado != checksum_recibido.upper():
+            return JsonResponse({'error': 'Firma inválida'}, status=403)
+
+    # --- Procesar la transacción ---
+    transaction = data.get('data', {}).get('transaction', {})
+    transaccion_id = transaction.get('id', '')
+    reference = transaction.get('reference', '')
+    status = transaction.get('status', '').lower()
+    amount_in_cents = transaction.get('amount_in_cents')
+    customer_email = transaction.get('customer_email', '')
+    payment_method_type = transaction.get('payment_method_type', '')
+
+    if not reference:
+        return JsonResponse({'error': 'Referencia no encontrada en el evento'}, status=400)
+
+    # Buscar pedido por referencia de pago
+    try:
+        pedido = Pedido.objects.get(referencia_pago=reference)
+    except Pedido.DoesNotExist:
+        return JsonResponse({'error': 'Pedido no encontrado para esta referencia'}, status=404)
+
+    with transaction.atomic():
+        pago, creado = PagoMercadoPago.objects.select_for_update().get_or_create(
+            pedido=pedido,
+            defaults={
+                'monto': pedido.total,
+                'payment_id': transaccion_id,
+                'estado': status,
+            }
+        )
+
+        if not creado:
+            pago.payment_id = transaccion_id or pago.payment_id
+            pago.estado = status
+            pago.monto = pedido.total
+            pago.save()
+
+        pedido.wompi_id = transaccion_id or pedido.wompi_id
+
+        if status == 'approved':
+            # Solo descontar stock y cambiar estado si no se ha hecho antes
+            if not creado and pago.estado == 'approved':
+                pass  # Ya estaba aprobado, no repetir
+            else:
+                descontar_stock_pedido(pedido)
+                pedido.estado = 'comprado'
+
+        pedido.save(update_fields=['estado', 'wompi_id'])
+
+    return JsonResponse({'status': 'ok'})
+
+
+@api_view(['GET'])
+def wompi_estado_pago(request, numero_pedido):
+    """Retorna el estado del pago Wompi para un pedido.
+    Útil para que el frontend verifique el estado después del webhook."""
+    try:
+        pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+    except Pedido.DoesNotExist:
+        return Response({'error': 'Pedido no encontrado'}, status=404)
+
+    try:
+        pago = PagoMercadoPago.objects.get(pedido=pedido)
+        return Response({
+            'estado': pago.estado,
+            'payment_id': pago.payment_id,
+            'monto': str(pago.monto),
+            'pedido_estado': pedido.estado,
+        })
+    except PagoMercadoPago.DoesNotExist:
+        return Response({
+            'estado': 'pending',
+            'payment_id': '',
+            'monto': str(pedido.total),
+            'pedido_estado': pedido.estado,
+        })

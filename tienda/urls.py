@@ -14,7 +14,7 @@ from .views import consultar_pedido
 from .views import listar_pedidos, actualizar_estado_pedido
 from .views import MisPedidosView
 from .views import crear_preferencia_mp, webhook_mp, estado_pago_mp, aprobar_pago_demo
-from .views import wompi_init_payment, wompi_webhook, wompi_estado_pago
+from .views import wompi_init_payment, wompi_webhook, wompi_estado_pago, wompi_verificar_transaccion
 
 router = DefaultRouter()
 router.register(r'productos', ProductoViewSet, basename='producto')
@@ -42,4 +42,5 @@ urlpatterns = [
     path('pagos/wompi/init/', wompi_init_payment, name='wompi-init'),
     path('pagos/webhook/wompi/', wompi_webhook, name='wompi-webhook'),
     path('pagos/wompi/estado/<str:numero_pedido>/', wompi_estado_pago, name='wompi-estado'),
+    path('pagos/wompi/verificar/', wompi_verificar_transaccion, name='wompi-verificar'),
 ]

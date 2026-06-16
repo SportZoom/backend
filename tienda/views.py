@@ -747,3 +747,71 @@ def wompi_estado_pago(request, numero_pedido):
             'monto': str(pedido.total),
             'pedido_estado': pedido.estado,
         })
+
+
+@api_view(['POST'])
+def wompi_verificar_transaccion(request):
+    """Verifica una transacción contra la API de Wompi y descuenta stock si es aprobada.
+    Reemplaza la dependencia del webhook: el frontend llama esto cuando el widget
+    devuelve status='approved'."""
+    numero_pedido = request.data.get('numero_pedido')
+    transaction_id = request.data.get('transaction_id')
+
+    if not numero_pedido or not transaction_id:
+        return Response({"error": "numero_pedido y transaction_id son requeridos"}, status=400)
+
+    try:
+        pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+    except Pedido.DoesNotExist:
+        return Response({"error": "Pedido no encontrado"}, status=404)
+
+    url = f"{settings.WOMPI_URL}/transactions/{transaction_id}"
+    headers = {"Authorization": f"Bearer {settings.WOMPI_PUBLIC_KEY}"}
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=15)
+    except requests.RequestException as e:
+        logger.error(f"Error consultando API Wompi: {e}")
+        return Response({"error": "No se pudo verificar la transacción con Wompi"}, status=502)
+
+    if resp.status_code != 200:
+        logger.error(f"API Wompi respondio {resp.status_code}: {resp.text}")
+        return Response({"error": "Error al verificar la transacción en Wompi"}, status=502)
+
+    data = resp.json()
+    data_transaccion = data.get('data', {})
+    wompi_status = data_transaccion.get('status', '').lower()
+
+    if wompi_status != 'approved':
+        logger.info(f"Transaccion {transaction_id} para pedido {numero_pedido} no aprobada: {wompi_status}")
+        return Response({"estado": wompi_status, "mensaje": f"La transacción no fue aprobada"})
+
+    with transaction.atomic():
+        pago, creado = PagoMercadoPago.objects.select_for_update().get_or_create(
+            pedido=pedido,
+            defaults={
+                'monto': pedido.total,
+                'payment_id': transaction_id,
+                'estado': 'approved',
+            }
+        )
+
+        ya_estaba_aprobado = not creado and pago.estado == 'approved'
+
+        if not creado:
+            pago.payment_id = transaction_id or pago.payment_id
+            pago.estado = 'approved'
+            pago.monto = pedido.total
+            pago.save()
+
+        if ya_estaba_aprobado:
+            logger.info(f"Pedido {numero_pedido}: transaccion {transaction_id} ya estaba aprobada, se omite descuento")
+            return Response({"estado": "approved", "mensaje": "El pago ya estaba aprobado"})
+
+        pedido.wompi_id = transaction_id
+        descontar_stock_pedido(pedido)
+        pedido.estado = 'comprado'
+        pedido.save(update_fields=['estado', 'wompi_id'])
+
+    logger.info(f"Pedido {numero_pedido}: transaccion {transaction_id} verificada, stock descontado")
+    return Response({"estado": "approved", "mensaje": "Pago verificado y stock descontado"})

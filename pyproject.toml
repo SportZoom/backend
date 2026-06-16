@@ -19,7 +19,7 @@ dependencies = [
     "idna==3.11",
     "mercadopago>=2.4.0",
     "pillow==11.3.0",
-    "psycopg2-binary==2.9.10",
+    "psycopg[binary]>=3.2",
     "pyjwt==2.10.1",
     "python-dotenv>=1.2.2",
     "requests==2.32.5",

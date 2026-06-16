@@ -17,12 +17,15 @@ import hashlib
 import requests
 import uuid
 import mercadopago
+import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import ClienteRegistroSerializer, ClienteLoginSerializer, PedidoClienteSerializer
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -291,7 +294,6 @@ def iniciar_pago(request):
     pedido.nombre = nombre if nombre else pedido.nombre
     pedido.email = email if email else pedido.email
     pedido.direccion = direccion if direccion else pedido.direccion
-    pedido.estado = "comprado"
     
     pedido.save()
 
@@ -618,8 +620,11 @@ def wompi_webhook(request):
     event = data.get('event')
     environment = data.get('environment', 'test')
 
+    logger.info(f"Wompi webhook recibido: event={event}, environment={environment}")
+
     # Solo procesar eventos de transacciones
     if event != 'transaction.updated':
+        logger.info(f"Wompi webhook ignorado: event={event}")
         return JsonResponse({'status': 'ignored'})
 
     # --- Verificación de firma del evento (seguridad) ---
@@ -657,14 +662,32 @@ def wompi_webhook(request):
     customer_email = transaction.get('customer_email', '')
     payment_method_type = transaction.get('payment_method_type', '')
 
+    logger.info(f"Webhook checksum valido. Transaccion: {transaccion_id}, status={status}, reference={reference}")
+
     if not reference:
         return JsonResponse({'error': 'Referencia no encontrada en el evento'}, status=400)
 
-    # Buscar pedido por referencia de pago
-    try:
-        pedido = Pedido.objects.get(referencia_pago=reference)
-    except Pedido.DoesNotExist:
-        return JsonResponse({'error': 'Pedido no encontrado para esta referencia'}, status=404)
+    # Buscar pedido: primero extraer numero_pedido de la referencia (formato PEDIDO-{numero}-{timestamp}),
+    # luego caer en busqueda por referencia_pago para compatibilidad con referencias antiguas
+    pedido = None
+    if reference.startswith('PEDIDO-'):
+        parts = reference.split('-')
+        if len(parts) >= 2:
+            numero_pedido = parts[1]
+            try:
+                pedido = Pedido.objects.get(numero_pedido=numero_pedido)
+            except Pedido.DoesNotExist:
+                pass
+
+    if pedido is None:
+        try:
+            pedido = Pedido.objects.get(referencia_pago=reference)
+        except Pedido.DoesNotExist:
+            return JsonResponse({'error': 'Pedido no encontrado para esta referencia'}, status=404)
+    else:
+        if pedido.referencia_pago != reference:
+            pedido.referencia_pago = reference
+            pedido.save(update_fields=['referencia_pago'])
 
     with transaction.atomic():
         pago, creado = PagoMercadoPago.objects.select_for_update().get_or_create(
@@ -676,6 +699,8 @@ def wompi_webhook(request):
             }
         )
 
+        estado_anterior = pago.estado if not creado else None
+
         if not creado:
             pago.payment_id = transaccion_id or pago.payment_id
             pago.estado = status
@@ -685,15 +710,16 @@ def wompi_webhook(request):
         pedido.wompi_id = transaccion_id or pedido.wompi_id
 
         if status == 'approved':
-            # Solo descontar stock y cambiar estado si no se ha hecho antes
-            if not creado and pago.estado == 'approved':
-                pass  # Ya estaba aprobado, no repetir
+            if not creado and estado_anterior == 'approved':
+                logger.info(f"Pedido {pedido.numero_pedido}: pago ya estaba aprobado, se omite descuento de stock")
             else:
+                logger.info(f"Pedido {pedido.numero_pedido}: descontando stock y marcando como comprado")
                 descontar_stock_pedido(pedido)
                 pedido.estado = 'comprado'
 
         pedido.save(update_fields=['estado', 'wompi_id'])
 
+    logger.info(f"Webhook procesado exitosamente para pedido {pedido.numero_pedido}, estado={status}")
     return JsonResponse({'status': 'ok'})
 
 

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Usuario, Producto
+from .models import Usuario, Producto, Cliente
 
 
 @admin.register(Usuario)
@@ -22,3 +22,11 @@ class ProductoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'precio', 'stock', 'creado')
     search_fields = ('nombre',)
     list_filter = ('creado',)
+
+
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'genero', 'fecha_registro')
+    search_fields = ('usuario__username', 'usuario__email', 'usuario__first_name', 'usuario__last_name')
+    list_filter = ('genero', 'fecha_registro')
+    readonly_fields = ('fecha_registro',)
